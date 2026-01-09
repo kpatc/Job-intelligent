@@ -105,7 +105,7 @@ class ReKruteScraper:
         return text.strip()
 
     def parse_job_listing(self, url: str) -> Optional[Dict]:
-        """Scrape les détails complets d'une offre d'emploi."""
+        """Scrape les détails complets d'une offre d'emploi avec extraction structurée."""
         try:
             response = self.fetch_page(url, timeout=8)
             if not response:
@@ -113,12 +113,15 @@ class ReKruteScraper:
             
             soup = BeautifulSoup(response.text, "html.parser")
             
-            # Extraire le titre
+            # ========== EXTRACTION TITRE ==========
             title_elem = soup.find("h1")
             title = self.clean_text(title_elem.get_text()) if title_elem else ""
             
             if not title or len(title) < 5:
                 return None
+            
+            # Récupérer tout le texte de la page
+            all_text = soup.get_text()
             
             # Filtrer strictement les offres data
             page_text = soup.get_text()[:3000]
@@ -126,96 +129,104 @@ class ReKruteScraper:
                 logger.debug(f"  ✗ REJECTED (non-data): {title[:60]}")
                 return None
             
-            # ========== EXTRACTION COMPANY ==========
-            # Chercher la section "Entreprise :"
-            company = ""
-            all_text = soup.get_text()
-            
-            # Chercher après "Entreprise :"
-            if "Entreprise :" in all_text:
-                start_idx = all_text.find("Entreprise :") + len("Entreprise :")
-                # Prendre le texte jusqu'au prochain titre principal
-                end_text = all_text[start_idx:start_idx + 500]
-                lines = end_text.split('\n')
-                for line in lines:
-                    line = self.clean_text(line)
-                    if line and len(line) > 3 and len(line) < 100:
-                        company = line
-                        break
-            
-            # Fallback: chercher dans les balises communes
-            if not company:
-                company_selectors = [
-                    ("h2", {"class": lambda x: x and "company" in x.lower()}),
-                    ("div", {"class": lambda x: x and "company" in x.lower()}),
-                    ("span", {"class": "company-name"}),
-                ]
-                for tag, attrs in company_selectors:
-                    elem = soup.find(tag, attrs)
-                    if elem:
-                        company = self.clean_text(elem.get_text())
-                        break
-            
-            # Dernier fallback
-            if not company:
-                company = "Non spécifié"
-            
-            # ========== EXTRACTION LOCALISATION ==========
+            # ========== EXTRACTION LOCALISATION (depuis featureInfo) ==========
             location = "International"
-            location_selectors = [
-                ("span", {"class": lambda x: x and "location" in x.lower()}),
-                ("div", {"data-testid": "job-location"}),
-                ("div", {"class": lambda x: x and "lieu" in x.lower()}),
-            ]
-            for tag, attrs in location_selectors:
-                elem = soup.find(tag, attrs)
-                if elem:
-                    location = self.clean_text(elem.get_text())
+            feature_list = soup.find("ul", {"class": "featureInfo"})
+            if feature_list:
+                for li in feature_list.find_all("li"):
+                    li_text = self.clean_text(li.get_text())
+                    # Chercher le pattern "X poste(s) sur [LOCATION] et région - Maroc"
+                    match = re.search(r"(?:poste\(s\)|postes?)\s+sur\s+([^e]+)\s+et\s+région", li_text, re.IGNORECASE)
+                    if match:
+                        location = self.clean_text(match.group(1))
+                        break
+            
+            # ========== EXTRACTION EXPERIENCE LEVEL ==========
+            experience = ""
+            if feature_list:
+                for li in feature_list.find_all("li"):
+                    li_text = self.clean_text(li.get_text())
+                    # Chercher "Confirmé (X à Y ans)" ou "Junior", "Senior"
+                    if any(exp in li_text.lower() for exp in ["confirmé", "junior", "senior", "expert", "ans"]):
+                        match = re.search(r"(Confirmé|Junior|Senior|Expert|Débutant)(?:\s+\(([^)]+)\))?", li_text)
+                        if match:
+                            experience = self.clean_text(match.group(0))
+                            break
+            
+            # ========== EXTRACTION COMPANY (depuis meta tag OG) ==========
+            company = "Non spécifié"
+            
+            # Méthode 1: Extraire depuis og:title meta tag - Format: "[COMPANY_NAME] JOB_TITLE"
+            og_title_meta = soup.find("meta", {"property": "og:title"})
+            if og_title_meta and og_title_meta.get("content"):
+                og_content = og_title_meta.get("content")
+                # Parse le format [COMPANY_NAME] JOB_TITLE
+                match = re.match(r'\[([^\]]+)\]\s+(.+)', og_content)
+                if match:
+                    company = self.clean_text(match.group(1))
+            
+            # Fallback 2: Chercher section "Entreprise :" dans le texte
+            if company == "Non spécifié":
+                all_text = soup.get_text()
+                if "Entreprise :" in all_text:
+                    start_idx = all_text.find("Entreprise :") + len("Entreprise :")
+                    end_text = all_text[start_idx:start_idx + 300]
+                    lines = [l.strip() for l in end_text.split('\n') if l.strip()]
+                    for line in lines:
+                        line = self.clean_text(line)
+                        if 5 < len(line) < 150 and not any(skip in line.lower() for skip in 
+                            ['candidature', 'contacter', 'appliquer', 'postuler', 'emploi', 'offre']):
+                            company = line
+                            break
+            
+            # ========== EXTRACTION CONTRACT TYPE ==========
+            contract_type = "Non spécifié"
+            contract_tags = soup.find_all("span", {"class": "tagContrat"})
+            for tag in contract_tags:
+                tag_text = self.clean_text(tag.get_text())
+                if any(ct in tag_text for ct in ["CDI", "CDD", "Freelance", "Stage", "Télétravail"]):
+                    contract_type = tag_text
                     break
             
             # ========== EXTRACTION DESCRIPTION ==========
-            # Extraire UNIQUEMENT "Poste" et "Profil recherché"
+            # Chercher les sections "Poste :" et "Profil recherché :"
             description_parts = []
             text_lines = all_text.split('\n')
             
             in_poste_section = False
             in_profil_section = False
-            in_unwanted_section = False
             
-            for i, line in enumerate(text_lines):
+            for line in text_lines:
                 line_clean = self.clean_text(line)
                 line_lower = line_clean.lower()
                 
                 # Détection des sections
-                if 'poste' in line_lower and ':' in line_lower:
+                if 'poste :' in line_lower or 'poste:' in line_lower:
                     in_poste_section = True
                     in_profil_section = False
-                    in_unwanted_section = False
                     continue
-                elif 'profil' in line_lower and 'recherch' in line_lower and ':' in line_lower:
+                elif 'profil' in line_lower and 'recherch' in line_lower:
                     in_profil_section = True
                     in_poste_section = False
-                    in_unwanted_section = False
                     continue
                 elif any(section in line_lower for section in [
-                    'entreprise', 'avantage', 'culture', 'candidature', 
+                    'entreprise :', 'avantage', 'culture', 'candidature', 
                     'processus', 'contact', 'nos offres', 'emplois'
                 ]):
                     in_poste_section = False
                     in_profil_section = False
-                    in_unwanted_section = True
                     continue
                 
-                # Ajouter le texte des sections pertinentes
-                if (in_poste_section or in_profil_section) and line_clean and len(line_clean) > 2:
+                # Ajouter texte pertinent
+                if (in_poste_section or in_profil_section) and line_clean and len(line_clean) > 3:
                     description_parts.append(line_clean)
             
-            description = " ".join(description_parts)[:2500]
+            description = " ".join(description_parts)[:3000]
             
             if not description:
-                description = f"Titre: {title} | Localisation: {location}"
+                description = f"Titre: {title} | Localisation: {location} | Expérience: {experience}"
             
-            logger.info(f"  ✓ {title[:60]} @ {company}")
+            logger.info(f"  ✓ {title[:50]:50} | {company[:40]:40} | {location[:20]}")
             
             return {
                 "job_id": f"rekrute_{len(self.offers)+1:05d}",
