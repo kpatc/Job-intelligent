@@ -1,0 +1,248 @@
+-- ============================================================
+-- SNOWFLAKE DATA MART VIEWS - Optimized for Power BI
+-- Phase 5: Create materialized views for BI queries
+-- ============================================================
+
+-- ============================================================
+-- 1. JOBS WITH FULL CONTEXT (Company, Location, Skills)
+-- ============================================================
+
+CREATE OR REPLACE VIEW VW_JOBS_FULL_CONTEXT AS
+SELECT 
+    j.JOB_ID,
+    j.JOB_TITLE,
+    j.JOB_TITLE_NORMALIZED,
+    c.COMPANY_NAME,
+    c.INDUSTRY,
+    c.COUNTRY as COMPANY_COUNTRY,
+    l.LOCATION_NAME,
+    l.COUNTRY,
+    l.REGION,
+    j.DESCRIPTION,
+    j.DESCRIPTION_LENGTH,
+    j.SOURCE,
+    j.PUBLISH_DATE,
+    j.SCRAPE_DATE,
+    j.JOB_POSTING_DAYS_OLD,
+    j.URL,
+    COUNT(DISTINCT js.SKILL_ID) as REQUIRED_SKILLS_COUNT,
+    LISTAGG(DISTINCT s.SKILL_NAME, ', ') WITHIN GROUP (ORDER BY s.SKILL_NAME) as REQUIRED_SKILLS,
+    LISTAGG(DISTINCT s.SKILL_CATEGORY, ', ') WITHIN GROUP (ORDER BY s.SKILL_CATEGORY) as SKILL_CATEGORIES
+FROM FACT_JOBS j
+LEFT JOIN DIM_COMPANIES c ON j.COMPANY_ID = c.COMPANY_ID
+LEFT JOIN DIM_LOCATIONS l ON j.LOCATION_ID = l.LOCATION_ID
+LEFT JOIN FACT_JOB_SKILLS js ON j.JOB_ID = js.JOB_ID
+LEFT JOIN DIM_SKILLS s ON js.SKILL_ID = s.SKILL_ID
+GROUP BY 
+    j.JOB_ID, j.JOB_TITLE, j.JOB_TITLE_NORMALIZED, c.COMPANY_NAME, c.INDUSTRY, 
+    c.COUNTRY, l.LOCATION_NAME, l.COUNTRY, l.REGION, j.DESCRIPTION, j.DESCRIPTION_LENGTH,
+    j.SOURCE, j.PUBLISH_DATE, j.SCRAPE_DATE, j.JOB_POSTING_DAYS_OLD, j.URL;
+
+
+-- ============================================================
+-- 2. SKILLS MARKET DEMAND (Most sought skills)
+-- ============================================================
+
+CREATE OR REPLACE VIEW VW_SKILLS_DEMAND AS
+SELECT 
+    s.SKILL_ID,
+    s.SKILL_NAME,
+    s.SKILL_CATEGORY,
+    COUNT(DISTINCT js.JOB_ID) as JOBS_REQUIRING_SKILL,
+    ROUND(COUNT(DISTINCT js.JOB_ID) * 100.0 / (SELECT COUNT(DISTINCT JOB_ID) FROM FACT_JOBS), 2) as DEMAND_PERCENTAGE,
+    ROUND(AVG(js.CONFIDENCE_SCORE), 3) as AVG_CONFIDENCE,
+    COUNT(DISTINCT j.COMPANY_ID) as COMPANIES_SEEKING,
+    COUNT(DISTINCT j.LOCATION_ID) as LOCATIONS_SEEKING,
+    LISTAGG(DISTINCT j.SOURCE, ', ') WITHIN GROUP (ORDER BY j.SOURCE) as JOB_SOURCES
+FROM DIM_SKILLS s
+LEFT JOIN FACT_JOB_SKILLS js ON s.SKILL_ID = js.SKILL_ID
+LEFT JOIN FACT_JOBS j ON js.JOB_ID = j.JOB_ID
+GROUP BY s.SKILL_ID, s.SKILL_NAME, s.SKILL_CATEGORY
+ORDER BY JOBS_REQUIRING_SKILL DESC;
+
+
+-- ============================================================
+-- 3. JOBS BY TITLE & CATEGORY
+-- ============================================================
+
+CREATE OR REPLACE VIEW VW_JOBS_BY_TITLE AS
+SELECT 
+    j.JOB_TITLE_NORMALIZED,
+    COUNT(*) as JOB_COUNT,
+    COUNT(DISTINCT c.COMPANY_ID) as COMPANY_COUNT,
+    COUNT(DISTINCT l.LOCATION_ID) as LOCATION_COUNT,
+    ROUND(AVG(j.JOB_POSTING_DAYS_OLD), 0) as AVG_POSTING_DAYS_OLD,
+    MIN(j.PUBLISH_DATE) as OLDEST_POSTING,
+    MAX(j.PUBLISH_DATE) as NEWEST_POSTING,
+    LISTAGG(DISTINCT l.LOCATION_NAME, ', ') WITHIN GROUP (ORDER BY l.LOCATION_NAME) as LOCATIONS
+FROM FACT_JOBS j
+LEFT JOIN DIM_COMPANIES c ON j.COMPANY_ID = c.COMPANY_ID
+LEFT JOIN DIM_LOCATIONS l ON j.LOCATION_ID = l.LOCATION_ID
+GROUP BY j.JOB_TITLE_NORMALIZED
+ORDER BY JOB_COUNT DESC;
+
+
+-- ============================================================
+-- 4. MARKET OVERVIEW (Key metrics)
+-- ============================================================
+
+CREATE OR REPLACE VIEW VW_MARKET_OVERVIEW AS
+SELECT 
+    (SELECT COUNT(DISTINCT JOB_ID) FROM FACT_JOBS) as TOTAL_JOBS,
+    (SELECT COUNT(DISTINCT COMPANY_ID) FROM DIM_COMPANIES) as TOTAL_COMPANIES,
+    (SELECT COUNT(DISTINCT LOCATION_ID) FROM DIM_LOCATIONS) as TOTAL_LOCATIONS,
+    (SELECT COUNT(DISTINCT SKILL_ID) FROM DIM_SKILLS) as TOTAL_SKILLS,
+    (SELECT COUNT(*) FROM FACT_JOB_SKILLS) as TOTAL_SKILL_MENTIONS,
+    (SELECT COUNT(DISTINCT SOURCE) FROM FACT_JOBS) as JOB_SOURCES,
+    (SELECT ROUND(AVG(JOB_POSTING_DAYS_OLD), 1) FROM FACT_JOBS) as AVG_JOB_AGE_DAYS,
+    (SELECT CURRENT_DATE) as LAST_UPDATED;
+
+
+-- ============================================================
+-- 5. COMPANY OPPORTUNITIES
+-- ============================================================
+
+CREATE OR REPLACE VIEW VW_COMPANY_OPPORTUNITIES AS
+SELECT 
+    c.COMPANY_ID,
+    c.COMPANY_NAME,
+    c.INDUSTRY,
+    c.COUNTRY,
+    COUNT(DISTINCT j.JOB_ID) as OPEN_POSITIONS,
+    COUNT(DISTINCT j.LOCATION_ID) as LOCATIONS_HIRING,
+    ROUND(AVG(j.JOB_POSTING_DAYS_OLD), 0) as AVG_POSTING_AGE_DAYS,
+    COUNT(DISTINCT js.SKILL_ID) as UNIQUE_SKILLS_REQUIRED,
+    LISTAGG(DISTINCT s.SKILL_NAME, ', ') WITHIN GROUP (ORDER BY s.SKILL_NAME) as TOP_SKILLS,
+    MIN(j.PUBLISH_DATE) as OLDEST_POSTING,
+    MAX(j.PUBLISH_DATE) as NEWEST_POSTING,
+    LISTAGG(DISTINCT j.SOURCE, ', ') WITHIN GROUP (ORDER BY j.SOURCE) as JOB_SOURCES
+FROM DIM_COMPANIES c
+LEFT JOIN FACT_JOBS j ON c.COMPANY_ID = j.COMPANY_ID
+LEFT JOIN FACT_JOB_SKILLS js ON j.JOB_ID = js.JOB_ID
+LEFT JOIN DIM_SKILLS s ON js.SKILL_ID = s.SKILL_ID
+GROUP BY c.COMPANY_ID, c.COMPANY_NAME, c.INDUSTRY, c.COUNTRY
+ORDER BY OPEN_POSITIONS DESC;
+
+
+-- ============================================================
+-- 6. REGIONAL JOB MARKET ANALYSIS
+-- ============================================================
+
+CREATE OR REPLACE VIEW VW_REGIONAL_ANALYSIS AS
+SELECT 
+    l.REGION,
+    l.COUNTRY,
+    COUNT(DISTINCT j.JOB_ID) as JOB_COUNT,
+    COUNT(DISTINCT c.COMPANY_ID) as COMPANY_COUNT,
+    COUNT(DISTINCT js.SKILL_ID) as UNIQUE_SKILLS,
+    ROUND(AVG(j.JOB_POSTING_DAYS_OLD), 1) as AVG_JOB_AGE,
+    LISTAGG(DISTINCT l.LOCATION_NAME, ', ') WITHIN GROUP (ORDER BY l.LOCATION_NAME) as LOCATIONS
+FROM DIM_LOCATIONS l
+LEFT JOIN FACT_JOBS j ON l.LOCATION_ID = j.LOCATION_ID
+LEFT JOIN DIM_COMPANIES c ON j.COMPANY_ID = c.COMPANY_ID
+LEFT JOIN FACT_JOB_SKILLS js ON j.JOB_ID = js.JOB_ID
+GROUP BY l.REGION, l.COUNTRY
+ORDER BY JOB_COUNT DESC;
+
+
+-- ============================================================
+-- 7. SKILL SPECIALIZATION BY JOB TITLE
+-- ============================================================
+
+CREATE OR REPLACE VIEW VW_SKILL_SPECIALIZATION AS
+SELECT 
+    j.JOB_TITLE_NORMALIZED,
+    s.SKILL_NAME,
+    s.SKILL_CATEGORY,
+    COUNT(DISTINCT js.JOB_ID) as JOBS_MENTIONING_SKILL,
+    ROUND(COUNT(DISTINCT js.JOB_ID) * 100.0 / 
+        (SELECT COUNT(DISTINCT JOB_ID) FROM FACT_JOBS WHERE JOB_TITLE_NORMALIZED = j.JOB_TITLE_NORMALIZED), 2) as SKILL_RELEVANCE_PCT,
+    ROUND(AVG(js.CONFIDENCE_SCORE), 3) as AVG_CONFIDENCE
+FROM FACT_JOBS j
+JOIN FACT_JOB_SKILLS js ON j.JOB_ID = js.JOB_ID
+JOIN DIM_SKILLS s ON js.SKILL_ID = s.SKILL_ID
+GROUP BY j.JOB_TITLE_NORMALIZED, s.SKILL_NAME, s.SKILL_CATEGORY
+ORDER BY j.JOB_TITLE_NORMALIZED, JOBS_MENTIONING_SKILL DESC;
+
+
+-- ============================================================
+-- 8. TRENDING SKILLS (Most recently posted jobs)
+-- ============================================================
+
+CREATE OR REPLACE VIEW VW_TRENDING_SKILLS AS
+SELECT 
+    s.SKILL_ID,
+    s.SKILL_NAME,
+    s.SKILL_CATEGORY,
+    COUNT(DISTINCT CASE WHEN j.PUBLISH_DATE >= DATEADD(day, -30, CURRENT_DATE) THEN js.JOB_ID END) as RECENT_JOBS_30D,
+    COUNT(DISTINCT CASE WHEN j.PUBLISH_DATE >= DATEADD(day, -7, CURRENT_DATE) THEN js.JOB_ID END) as RECENT_JOBS_7D,
+    ROUND(AVG(CASE WHEN j.PUBLISH_DATE >= DATEADD(day, -30, CURRENT_DATE) THEN js.CONFIDENCE_SCORE END), 3) as RECENT_AVG_CONFIDENCE
+FROM DIM_SKILLS s
+LEFT JOIN FACT_JOB_SKILLS js ON s.SKILL_ID = js.SKILL_ID
+LEFT JOIN FACT_JOBS j ON js.JOB_ID = j.JOB_ID
+GROUP BY s.SKILL_ID, s.SKILL_NAME, s.SKILL_CATEGORY
+HAVING COUNT(DISTINCT CASE WHEN j.PUBLISH_DATE >= DATEADD(day, -30, CURRENT_DATE) THEN js.JOB_ID END) > 0
+ORDER BY RECENT_JOBS_30D DESC;
+
+
+-- ============================================================
+-- 9. JOB DESCRIPTION COMPLEXITY ANALYSIS
+-- ============================================================
+
+CREATE OR REPLACE VIEW VW_JOB_COMPLEXITY AS
+SELECT 
+    j.JOB_TITLE_NORMALIZED,
+    COUNT(*) as JOB_COUNT,
+    ROUND(AVG(j.DESCRIPTION_LENGTH), 0) as AVG_DESCRIPTION_LENGTH,
+    ROUND(AVG(COUNT(DISTINCT js.SKILL_ID)) OVER (PARTITION BY j.JOB_TITLE_NORMALIZED), 1) as AVG_SKILLS_REQUIRED,
+    COUNT(DISTINCT js.SKILL_ID) as TOTAL_UNIQUE_SKILLS,
+    ROUND(AVG(j.DESCRIPTION_LENGTH) + (COUNT(DISTINCT js.SKILL_ID) * 10), 0) as COMPLEXITY_SCORE
+FROM FACT_JOBS j
+LEFT JOIN FACT_JOB_SKILLS js ON j.JOB_ID = js.JOB_ID
+GROUP BY j.JOB_TITLE_NORMALIZED
+ORDER BY COMPLEXITY_SCORE DESC;
+
+
+-- ============================================================
+-- SUMMARY: Available BI Views
+-- ============================================================
+
+/*
+VIEWS CREATED FOR POWER BI:
+
+1. VW_JOBS_FULL_CONTEXT
+   - Complete job info with companies, locations, and all required skills
+   - Best for: Job details, skill requirements analysis
+
+2. VW_SKILLS_DEMAND
+   - Top demanded skills across the market
+   - Best for: Skill market analysis, trend identification
+
+3. VW_JOBS_BY_TITLE
+   - Job titles and their prevalence
+   - Best for: Job market overview, title trends
+
+4. VW_MARKET_OVERVIEW
+   - Key metrics (total jobs, companies, skills, etc.)
+   - Best for: KPI dashboards, summary cards
+
+5. VW_COMPANY_OPPORTUNITIES
+   - Companies with open positions and skill requirements
+   - Best for: Company analysis, employer profiles
+
+6. VW_REGIONAL_ANALYSIS
+   - Jobs by region and country
+   - Best for: Geographic analysis, location trends
+
+7. VW_SKILL_SPECIALIZATION
+   - Skills by job title (which skills are most relevant per role)
+   - Best for: Role-specific skill analysis
+
+8. VW_TRENDING_SKILLS
+   - Recently mentioned skills (7d, 30d trends)
+   - Best for: Trend analysis, emerging skills
+
+9. VW_JOB_COMPLEXITY
+   - Complexity scoring based on description and skills
+   - Best for: Job difficulty analysis
+*/
