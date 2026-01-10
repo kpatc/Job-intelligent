@@ -1,0 +1,28 @@
+\chapter{Introduction}
+
+\section{Contexte et problématique}
+Le recrutement dans les métiers de la donnée (\emph{Data Analyst}, \emph{Data Engineer}, \emph{Data Scientist}, \emph{ML Engineer}) repose sur des signaux hétérogènes: intitulés variables, descriptions longues, compétences implicites, et sources multiples. L'objectif de \projectname{} est d'automatiser la collecte, la structuration, puis l'analyse de ces informations afin de:\begin{itemize}
+  \item mesurer la demande du marché (volumétrie, entreprises, localisation),
+  \item identifier les compétences les plus requises et leurs tendances,
+  \item proposer un système de recommandation d'offres en fonction d'un profil candidat,
+  \item fournir des dashboards interactifs via une solution libre et auto-hébergée.
+\end{itemize}
+
+\section{Objectifs du projet}
+Le projet a été réalisé comme un pipeline de bout en bout, organisé en phases:\begin{enumerate}
+  \item Ingestion multi-sources (scraping) des offres ciblées Data/ML.
+  \item Nettoyage, harmonisation, déduplication, normalisation des champs.
+  \item Extraction de compétences (approche hybride regex + sémantique).
+  \item Modélisation et chargement dans Snowflake (schéma en étoile).
+  \item Data mart BI: vues optimisées pour exploration et agrégations.
+  \item Visualisation et reporting: dashboards dans Apache Superset (Docker).
+\end{enumerate}
+
+\section{Livrables}
+Les livrables produits incluent:\begin{itemize}
+  \item des fichiers CSV d'export (données brutes et nettoyées),
+  \item un schéma Snowflake (dimensions et faits) et des vues BI (VW\_\*),
+  \item un moteur de recommandation (similarité sémantique + matching compétences),
+  \item un environnement Superset prêt à l'emploi (docker-compose),
+  \item un ensemble de dashboards illustrés (captures intégrées au rapport).
+\end{itemize}

@@ -1,0 +1,44 @@
+\chapter{Nettoyage et harmonisation}
+
+\section{Objectifs}
+Le nettoyage vise à:\begin{itemize}
+  \item harmoniser les colonnes entre sources,
+  \item normaliser les titres et les champs textuels,
+  \item supprimer les doublons (URL, couple titre/entreprise),
+  \item produire un dataset consolidé pour les phases NLP et entrepôt.
+\end{itemize}
+
+\section{Harmonisation des schémas}
+Les scrapers produisent des colonnes proches mais non identiques. Le module de nettoyage aligne les champs sur un schéma standard:\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Champ} & \textbf{Description}\\
+\midrule
+job\_id & identifiant technique unique\\
+title & intitulé de poste\\
+company & entreprise\\
+location & localisation brute\\
+url & lien de l'offre\\
+description & description (tronquée)\\
+publish\_date & date de publication (ou fallback)\\
+source & indeed / rekrute\\
+scrape\_date & date de scraping\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Normalisation des titres}
+Les intitulés sont normalisés via des règles de remplacement (ex: \emph{ml engineer} $\rightarrow$ \emph{Machine Learning Engineer}) puis capitalisation standard.
+
+\section{Gestion des textes}
+Les descriptions sont nettoyées (espaces, caractères de contrôle) et tronquées pour garantir des tailles raisonnables en stockage et traitement.
+
+\section{Déduplication}
+Deux stratégies complémentaires sont appliquées:
+\begin{itemize}
+  \item déduplication par URL,
+  \item déduplication par (titre, entreprise) pour capter les duplicats multi-URLs.
+\end{itemize}
+
+\section{Sortie}
+La sortie principale est \texttt{data/jobs\_cleaned.csv} utilisée ensuite pour l'extraction de compétences et le chargement Snowflake.

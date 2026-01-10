@@ -1,0 +1,38 @@
+\begin{titlepage}
+\begin{center}
+	\vspace*{1cm}
+
+	% Tout le contenu dans un minipage verrouille les images sur cette page
+	\begin{minipage}{1\textwidth}
+		\centering
+
+			\vspace{0.8cm}
+				extbf{\LARGE \projectname}
+		\vspace{0.6cm}
+		\Large \reportsubtitle
+
+		% Optional project image (if provided)
+		\vspace{0.8cm}
+		\IfFileExists{imgs/job-intelligent-logo.png}{\includegraphics[width=0.55\textwidth]{imgs/job-intelligent-logo.png}}{}
+
+		\vspace{1.8cm}
+		\normalsize \authors
+
+		\vspace{0.3cm}
+		\normalsize \supervisor
+
+		\vspace{0.8cm}
+
+		% Optional ENSAH logo (if provided)
+		\IfFileExists{imgs/ENSAH.png}{\includegraphics[width=0.18\textwidth]{imgs/ENSAH.png}}{}
+
+		\vspace{0.8cm}
+		\large \schoolname
+		\\
+		\large \academicyear
+		\\
+		\large \projectdate
+	\end{minipage}
+\end{center}
+\end{titlepage}
+

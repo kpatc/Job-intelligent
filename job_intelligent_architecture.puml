@@ -1,0 +1,69 @@
+@startuml job_intelligent_architecture
+left to right direction
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam componentStyle rectangle
+skinparam packageStyle rectangle
+skinparam defaultFontName Arial
+skinparam defaultFontSize 14
+skinparam ArrowThickness 1.2
+skinparam ArrowColor #444444
+skinparam PackageBorderColor #666666
+skinparam PackageBackgroundColor #FFFFFF
+
+!define DATA_COLOR #FFD700
+!define PROCESS_COLOR #FF6B6B
+!define NLP_COLOR #45B7D1
+!define WAREHOUSE_COLOR #0DB7ED
+!define DATAMART_COLOR #623CE4
+!define REC_COLOR #26A969
+!define VIZ_COLOR #D24939
+
+title Architecture Générale — Job Intelligent
+
+package "1) Data Sources" as p_sources {
+  component "ReKrute" as rekrute #DATA_COLOR
+  component "Indeed" as indeed #DATA_COLOR
+}
+
+package "2) Ingestion & Cleaning" as p_clean {
+  component "Scraping + Collecte" as ingest #PROCESS_COLOR
+  component "Nettoyage" as cleaning #PROCESS_COLOR
+}
+
+package "3) NLP" as p_nlp {
+  component "Extraction des\ncompétences" as nlp #NLP_COLOR
+}
+
+package "4) Snowflake" as p_wh {
+  component "Data Warehouse\n(Star Schema)" as warehouse #WAREHOUSE_COLOR
+  component "Data Mart\n(VW_* Views)" as datamart #DATAMART_COLOR
+}
+
+package "5) Intelligence" as p_rec {
+  component "Recommandation" as recommendations #REC_COLOR
+}
+
+package "6) BI" as p_bi {
+  component "Apache Superset\nDashboards" as superset #VIZ_COLOR
+}
+
+rekrute --> ingest : jobs bruts
+indeed --> ingest : jobs bruts
+ingest --> cleaning : dataset unifié
+cleaning --> nlp : descriptions nettoyées
+nlp --> warehouse : jobs + skills
+warehouse --> datamart : agrégations
+datamart --> superset : datasets
+datamart --> recommendations : features
+recommendations --> superset : ranking
+
+note bottom of p_sources
+  Sources principales : Indeed + ReKrute
+end note
+
+note bottom of p_wh
+  Snowflake : Dims + Facts + vues VW_* pour BI
+end note
+
+@enduml

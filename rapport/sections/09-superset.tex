@@ -1,0 +1,73 @@
+\chapter{Visualisation dans Apache Superset}
+
+\section{Choix de l'outil}
+La visualisation est réalisée avec \textbf{Apache Superset} pour disposer d'une solution web open-source, déployable localement via Docker, et sans dépendance à un compte cloud propriétaire.
+
+\section{Déploiement Docker Compose}
+L'environnement comprend:\begin{itemize}
+  \item \textbf{PostgreSQL}: base de métadonnées Superset,
+  \item \textbf{Redis}: cache,
+  \item \textbf{Superset}: interface web (port 8088).
+\end{itemize}
+
+Le script d'initialisation automatise:\begin{itemize}
+  \item migrations DB (\texttt{superset db upgrade}),
+  \item création de l'utilisateur admin,
+  \item initialisation des rôles/permissions (\texttt{superset init}),
+  \item installation du driver Snowflake (\texttt{snowflake-sqlalchemy}).
+\end{itemize}
+
+\section{Connexion à Snowflake}
+Après installation du driver, Superset est connecté à l'entrepôt Snowflake. Cette connexion permet d'importer chaque table/vue comme \emph{dataset} Superset.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{imgs/connectionsnowflakesuperset.png}
+\caption{Connexion Snowflake dans Superset}
+\end{figure}
+
+\section{Création des datasets}
+Dans Superset, un dataset correspond à une table ou une vue. La création est répétée pour les tables de faits/dimensions et les vues BI.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{imgs/datasetcreation.png}
+\caption{Création d'un dataset (table/vue) dans Superset}
+\end{figure}
+
+\section{Dashboards réalisés}
+Les dashboards s'appuient majoritairement sur les vues \texttt{VW\_\*} afin de réduire la complexité des charts.
+
+\subsection{Dashboard 1: Market Overview}
+KPIs (total jobs, entreprises, skills) et distributions (titres, sources, localisation).
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{imgs/dashboardmarketoverview.png}
+\caption{Dashboard Market Overview}
+\end{figure}
+
+\subsection{Dashboard 2--3: Skills  Demand et Company Opportunities}
+Analyse des compétences demandées et des entreprises recrutant, incluant des visualisations de type bar charts, tables et treemap. La dimension \texttt{INDUSTRY} a été enrichie lorsque manquante afin d'activer la visualisation "Companies by Industry".
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{imgs/dashboardskillscompanyopportunities.png}
+\caption{Dashboards Skills Demand et Company Opportunities}
+\end{figure}
+
+\subsection{Dashboard 4: Job Details Explorer}
+Exploration interactive des offres (table + filtres). Les filtres sont mis en place via les \textbf{Native Filters} Superset (équivalent des slicers Power BI).
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{imgs/dashboardjobexplorerskillsfiltrer.png}
+\caption{Job Explorer avec filtres et liste des compétences}
+\end{figure}
+
+\section{Bonnes pratiques de configuration des charts}
+\begin{itemize}
+  \item \textbf{Dimensions}: champs catégoriels (ex: titre, ville, entreprise).
+  \item \textbf{Metrics}: agrégations numériques (COUNT, SUM, AVG).
+  \item \textbf{Tri et Top-N}: utiliser \texttt{SORT BY} + \texttt{ROW LIMIT} pour les classements.
+\end{itemize}

@@ -1,155 +1,101 @@
-# Job Intelligent - Complete Data Intelligence Platform
+# Job Intelligent
 
-Plateforme data-driven pour l'analyse, l'extraction de skills, et la recommandation d'offres d'emploi Data/ML.
+Job Intelligent est une plateforme d'analyse du marché de l'emploi (orientée Data/ML) couvrant le pipeline complet : collecte d'offres, nettoyage, extraction de compétences, stockage Snowflake, vues BI, recommandation et tableaux de bord.
 
-**Status**: ✅ Fully Functional (6 phases complete)
+## Architecture
 
----
+![Architecture du projet](rapport/imgs/diagram.png)
 
-## 🏗️ Architecture
+## Objectif
 
-```
-PHASE 1-2: DATA INGESTION
-[ ReKrute Scraper ]  [ Indeed Scraper ]
-         ↓                    ↓
-      38 Jobs          +    41 Jobs        (Multi-region)
+Le projet vise à centraliser des offres Data/ML issues de plusieurs sources, à en extraire automatiquement les compétences demandées, puis à fournir des indicateurs et des visualisations (Superset) ainsi qu'une couche de recommandation.
 
-PHASE 3: DATA PROCESSING
-         ↓
-    [ Data Cleaner ] → 79 Jobs (deduplicated)
-         ↓
-   [ Skills Extractor ] → 370 Skills (61 unique)
-         ↓
-   [ Snowflake Loader ] → Star Schema
-         ↓
-    DIM_COMPANIES (55)  DIM_LOCATIONS (3)  DIM_SKILLS (61)
-    FACT_JOBS (79)      FACT_JOB_SKILLS (370)
+## Modules
 
-PHASE 5: DATA MART BI
-         ↓
-    9 Optimized Views (VW_*)
-    
-PHASE 4: RECOMMENDATIONS
-         ↓
-   [ Recommendation Engine ]
-   (Semantic + Skill Matching)
+- Ingestion : scrapers Indeed et ReKrute (src/ingestion)
+- Processing : nettoyage et normalisation des offres (src/processing)
+- NLP : extraction de compétences (src/nlp)
+- Data Warehouse : schéma étoile et chargement Snowflake (scripts + src/database)
+- Data Mart : vues BI VW_* (scripts/snowflake_datamart.sql)
+- Recommandation : matching compétences + similarité sémantique (src/recommandation)
+- BI : Apache Superset (docker-compose.yml)
 
-PHASE 6: DASHBOARDS
-         ↓
-    [ Power BI ]
-    (6 Dashboards)
-```
+## Données produites
 
-## 📊 Project Status
+Les exécutions génèrent principalement des fichiers CSV dans `data/` (exemples) :
 
-| Phase | Component | Status | 
-|-------|-----------|--------|
-| 1-2 | Data Ingestion (ReKrute, Indeed) | ✅ Complete (79 jobs) |
-| 3 | Data Processing & Cleaning | ✅ Complete |
-| 3 | NLP Skills Extraction | ✅ Complete (370 extractions) |
-| 3 | Snowflake Schema | ✅ Complete (star schema) |
-| 3 | Data Loading | ✅ Complete |
-| 4 | Recommendation Engine | ✅ Ready |
-| 5 | BI Data Mart Views | ✅ Ready (9 views) |
-| 6 | Power BI Dashboards | ✅ Configured |
+- `data/indeed_jobs.csv`, `data/rekrute_jobs.csv` : exports bruts
+- `data/jobs_cleaned.csv` : dataset unifié nettoyé
+- `data/jobs_skills.csv` : extraction des compétences par offre
+- `data/candidate_recommendations.csv` : recommandations générées
 
-## 📦 Structure du projet
+## Prérequis
 
-```
-job-intelligent/
-├── src/
-│   ├── ingestion/              # Phase 1-2: Web scrapers
-│   │   ├── rekrute_ingester.py     # ReKrute (25 pages)
-│   │   ├── indeed_ingester.py      # Indeed (3 regions)
-│   │   └── remoteok_ingester.py    # RemoteOK (template)
-│   ├── processing/             # Phase 3: Data cleaning
-│   │   └── data_cleaner.py         # Harmonization
-│   ├── nlp/                    # Phase 3: NLP
-│   │   └── skills_extractor.py     # 200+ patterns, BERT
-│   ├── database/               # Phase 3: Snowflake
-│   │   ├── models.py               # ORM definitions
-│   │   └── snowflake_loader.py     # Data loading
-│   ├── recommandation/         # Phase 4: Recommendations
-│   │   └── recommendation_engine.py # Semantic + Skills
-│   └── powerbi_setup.py        # Phase 6: BI Config
-├── config/                 # Environment & settings
-├── data/                   # CSV exports
-│   ├── indeed_jobs.csv
-│   ├── rekrute_jobs.csv
-│   ├── jobs_cleaned.csv        # Combined 79 jobs
-│   ├── jobs_skills.csv         # 370 extractions
-│   └── candidate_recommendations.csv
-├── scripts/                # SQL & orchestration
-│   ├── snowflake_schema.sql    # Phase 3: Schema
-│   └── snowflake_datamart.sql  # Phase 5: BI views
-├── PHASES_4_5_6.md        # Detailed phases docs
-├── requirements.txt       # Dependencies
-└── README.md
-```
+- Python 3.10+
+- Un compte Snowflake (si vous voulez charger et requêter dans Snowflake)
+- Docker + Docker Compose (pour Superset)
 
-## 🚀 Quick Start
+## Démarrage rapide
 
-### 1. Setup Environment
+### 1) Installer les dépendances
+
 ```bash
-cd /home/josh/PowerBi/job-intelligent
-source /home/josh/PowerBi/venv/bin/activate
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 ```
 
-### 2. View Data
+### 2) Configurer Snowflake (optionnel)
+
+Créer un fichier `.env` à la racine du projet :
+
 ```bash
-# Jobs cleaned (79 total)
-cat data/jobs_cleaned.csv | head -5
-
-# Skills extracted (370 total)
-cat data/jobs_skills.csv | head -10
+SNOWFLAKE_ACCOUNT=...
+SNOWFLAKE_USER=...
+SNOWFLAKE_PASSWORD=...
+SNOWFLAKE_WAREHOUSE=COMPUTE_WH
+SNOWFLAKE_DATABASE=JOB_INTELLIGENT
+SNOWFLAKE_SCHEMA=PUBLIC
+SNOWFLAKE_ROLE=ACCOUNTADMIN
 ```
 
-### 3. Test Recommendations (Phase 4)
+### 3) Exécuter le pipeline (CSV -> Snowflake)
+
+1. Collecter les offres (Indeed/ReKrute) et générer les exports CSV.
+2. Nettoyer et normaliser le dataset (jobs_cleaned.csv).
+3. Extraire les compétences (jobs_skills.csv).
+4. Créer le schéma Snowflake : `scripts/snowflake_schema.sql`.
+5. Charger les données dans Snowflake :
+
 ```bash
-python src/recommandation/recommendation_engine.py
-# Output: data/candidate_recommendations.csv
+python src/database/snowflake_loader.py
 ```
 
-### 4. Query Data Mart (Phase 5)
-```python
-from src.database.snowflake_loader import SnowflakeLoader
+6. Créer les vues BI (data mart) : `scripts/snowflake_datamart.sql`.
 
-loader = SnowflakeLoader()
-loader.connect()
+## Superset (BI)
 
-# Query a view
-jobs = loader.execute_sql("SELECT * FROM VW_JOBS_FULL_CONTEXT LIMIT 5")
-print(jobs)
-```
-
-### 5. Power BI (Phase 6)
-See [PHASES_4_5_6.md](PHASES_4_5_6.md) for dashboard setup guide
-
-4. **Configurer la base de données PostgreSQL**
 ```bash
-# Voir scripts/setup_database.sql
-psql -U postgres -f scripts/setup_database.sql
+docker compose up -d
+./superset_init.sh
 ```
 
-5. **Configuration ENV**
-```bash
-cp .env.example .env
-# Éditer .env avec vos paramètres
-```
+Superset est ensuite accessible sur `http://localhost:8088`.
 
-## 🎯 Phases du projet
+## Captures (Superset)
 
-- [ ] Phase 1 : Architecture & BD (en cours)
-- [ ] Phase 2 : Ingestion données
-- [ ] Phase 3 : Nettoyage & Normalisation
-- [ ] Phase 4 : NLP & Recommandation
-- [ ] Phase 5 : Data Mart BI
-- [ ] Phase 6 : Dashboard Power BI
+Connexion Snowflake :
 
-## 📝 Livrables
+![Connexion Snowflake dans Superset](rapport/imgs/connectionsnowflakesuperset.png)
 
-- Base de données centralisée
-- Pipeline data documentée
-- Système de recommandation
-- Dashboard Power BI
-- Rapport final
+Création de dataset :
+
+![Création de dataset Superset](rapport/imgs/datasetcreation.png)
+
+Exemples de dashboards :
+
+![Dashboard Market Overview](rapport/imgs/dashboardmarketoverview.png)
+
+![Dashboard Skills & Company Opportunities](rapport/imgs/dashboardskillscompanyopportunities.png)
+
+![Dashboard Job Explorer / Skills Filter](rapport/imgs/dashboardjobexplorerskillsfiltrer.png)

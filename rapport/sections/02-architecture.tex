@@ -1,0 +1,36 @@
+\chapter{Architecture générale}
+
+\section{Vue d'ensemble}
+La plateforme est structurée en modules Python spécialisés et scripts SQL. L'approche privilégiée est un pipeline reproductible: chaque phase produit des artefacts (CSV, tables Snowflake, vues) consommés par la phase suivante.
+
+\section{Organisation du dépôt}
+Les principaux répertoires sont:\begin{itemize}
+  \item \textbf{src/ingestion}: scrapers ReKrute et Indeed.
+  \item \textbf{src/processing}: nettoyage et normalisation.
+  \item \textbf{src/nlp}: extraction de compétences.
+  \item \textbf{src/database}: chargement Snowflake.
+  \item \textbf{src/recommandation}: moteur de recommandation.
+  \item \textbf{scripts/}: schéma Snowflake et data mart (vues).
+  \item \textbf{docker-compose.yml}: orchestration Superset + Postgres + Redis.
+\end{itemize}
+
+\section{Flux de données}
+Le flux principal est:\begin{enumerate}
+  \item Scraping $\rightarrow$ exports bruts (\texttt{indeed\_jobs.csv}, \texttt{rekrute\_jobs.csv}).
+  \item Nettoyage $\rightarrow$ dataset consolidé (\texttt{jobs\_cleaned.csv}).
+  \item Extraction skills $\rightarrow$ dataset de relations job-skill (\texttt{jobs\_skills.csv}).
+  \item Chargement Snowflake $\rightarrow$ dimensions + faits.
+  \item Vues BI $\rightarrow$ datasets Superset.
+  \item Dashboards Superset $\rightarrow$ exploration et reporting.
+\end{enumerate}
+
+\section{Choix technologiques}
+\begin{itemize}
+  \item \textbf{Python}: orchestration, scraping, traitement, NLP.
+  \item \textbf{Selenium + undetected-chromedriver}: contournement de protections anti-bot sur Indeed.
+  \item \textbf{BeautifulSoup + requests}: extraction HTML robuste sur ReKrute.
+  \item \textbf{Sentence-BERT}: similarité sémantique pour compléter les regex.
+  \item \textbf{Snowflake}: entrepôt cloud, schéma en étoile, vues analytiques.
+  \item \textbf{Apache Superset}: BI open-source, dashboards web, connecteur Snowflake.
+  \item \textbf{Docker Compose}: déploiement local reproductible de Superset.
+\end{itemize}

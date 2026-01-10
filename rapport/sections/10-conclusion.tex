@@ -1,0 +1,19 @@
+\chapter{Conclusion et perspectives}
+
+\section{Bilan}
+\projectname{} met en place un pipeline complet d'intelligence du marché de l'emploi orienté Data/ML: collecte multi-sources, préparation de données, extraction automatique de compétences, stockage analytique Snowflake, data mart via vues, recommandations et dashboards Superset.
+
+\section{Limites}
+\begin{itemize}
+  \item Les scrapers peuvent être affectés par des changements d'interface (sélecteurs HTML) et des protections anti-bot.
+  \item Les champs métiers (industrie, pays, région) dépendent de la richesse des sources et peuvent nécessiter enrichissement.
+  \item Le NLP reste sensible à la qualité des descriptions et au vocabulaire (synonymes, abréviations).
+\end{itemize}
+
+\section{Perspectives}
+\begin{itemize}
+  \item Ajouter une couche d'enrichissement géographique (normalisation pays/ville via référentiels).
+  \item Étendre la taxonomie de compétences et gérer explicitement les synonymes.
+  \item Automatiser la génération d'exports Superset (dashboards/charts) via API.
+  \item Mettre en place une planification (cron) et un monitoring (logs, alerting) du pipeline.
+\end{itemize}

@@ -1,0 +1,25 @@
+\chapter{Sch\'ema Snowflake (r\'esum\'e)}
+
+Cette annexe r\'esume le sch\'ema en \`etoile utilis\'e pour l'entrep\^ot Snowflake. Le d\'etail complet est disponible dans le script \texttt{scripts/snowflake\_schema.sql}.
+
+\section{Dimensions}
+\begin{itemize}
+  \item \textbf{DIM\_COMPANIES}: \texttt{company\_id}, \texttt{company\_name}, \texttt{industry}, \texttt{country}, \ldots
+  \item \textbf{DIM\_LOCATIONS}: \texttt{location\_id}, \texttt{location\_name}, \texttt{country}, \texttt{region}, \ldots
+  \item \textbf{DIM\_SKILLS}: \texttt{skill\_id}, \texttt{skill\_name}, \texttt{skill\_category}, \ldots
+\end{itemize}
+
+\section{Faits}
+\begin{itemize}
+  \item \textbf{FACT\_JOBS}: \texttt{job\_id}, \texttt{company\_id}, \texttt{location\_id}, \texttt{job\_title}, \texttt{description}, \texttt{publish\_date}, \texttt{source}, \ldots
+  \item \textbf{FACT\_JOB\_SKILLS}: \texttt{job\_skill\_id}, \texttt{job\_id}, \texttt{skill\_id}, \texttt{confidence\_score}, \texttt{position\_in\_description}, \ldots
+\end{itemize}
+
+\section{Relations (cl\'es \`etrang\`eres)}
+\begin{itemize}
+  \item \texttt{FACT\_JOBS.company\_id} $\rightarrow$ \texttt{DIM\_COMPANIES.company\_id}
+  \item \texttt{FACT\_JOBS.location\_id} $\rightarrow$ \texttt{DIM\_LOCATIONS.location\_id}
+  \item \texttt{FACT\_JOB\_SKILLS.job\_id} $\rightarrow$ \texttt{FACT\_JOBS.job\_id}
+  \item \texttt{FACT\_JOB\_SKILLS.skill\_id} $\rightarrow$ \texttt{DIM\_SKILLS.skill\_id}
+\end{itemize}
+

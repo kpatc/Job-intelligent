@@ -1,0 +1,51 @@
+\chapter{Entrepôt de données Snowflake}
+
+\section{Modélisation: schéma en étoile}
+Le stockage analytique s'appuie sur un schéma en étoile:\begin{itemize}
+  \item \textbf{Dimensions}: entreprises, localisations, compétences.
+  \item \textbf{Faits}: offres d'emploi, relations offre-compétence.
+\end{itemize}
+
+\subsection{Tables dimensionnelles}
+\begin{itemize}
+  \item \texttt{DIM\_COMPANIES}: entreprise (nom, industrie, pays).
+  \item \texttt{DIM\_LOCATIONS}: localisation (nom, pays, région).
+  \item \texttt{DIM\_SKILLS}: compétence (nom, catégorie).
+\end{itemize}
+
+\subsection{Tables de faits}
+\begin{itemize}
+  \item \texttt{FACT\_JOBS}: offre (titre, description, source, dates, clés étrangères).
+  \item \texttt{FACT\_JOB\_SKILLS}: pont (job\_id, skill\_id) avec score de confiance.
+\end{itemize}
+
+\section{Chargement des données}
+Le chargement est orchestré par un module Python qui:
+\begin{itemize}
+  \item lit les CSV nettoyés, 
+  \item extrait les valeurs uniques pour les dimensions,
+  \item charge les dimensions, puis récupère les IDs générés,
+  \item charge les faits en respectant les dépendances,
+  \item calcule des champs dérivés (longueur description, ancienneté de l'offre).
+\end{itemize}
+
+\subsection{Gestion des dates}
+Les dates sont converties au format chaîne (YYYY-MM-DD) avant insertion afin d'éviter les problèmes de casting (DATE/TIMESTAMP) côté Snowflake.
+
+\section{Statistiques (état actuel)}
+Au moment de la rédaction, les volumes Snowflake sont:\begin{center}
+\begin{tabular}{lr}
+\toprule
+\textbf{Table} & \textbf{Lignes}\\
+\midrule
+DIM\_COMPANIES & 220\\
+DIM\_LOCATIONS & 9\\
+DIM\_SKILLS & 183\\
+FACT\_JOBS & 79\\
+FACT\_JOB\_SKILLS & 370\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Qualité et complétion}
+Certaines dimensions (ex: industrie) peuvent être incomplètes selon les sources. Une stratégie d'enrichissement a été appliquée (valeurs par défaut et heuristiques simples) pour permettre des visualisations agrégées cohérentes.

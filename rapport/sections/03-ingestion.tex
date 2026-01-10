@@ -1,0 +1,27 @@
+\chapter{Ingestion des données}
+
+\section{Objectif d'ingestion}
+La phase d'ingestion vise à collecter des offres orientées Data/ML depuis plusieurs sources afin de réduire les biais d'une source unique. Les scrapers appliquent un filtrage "métier" (DATA/ML/AI) dès la collecte pour limiter le bruit.
+
+\section{Scraper ReKrute (requests + BeautifulSoup)}
+\subsection{Principes}
+Le module ReKrute cible une page listant les métiers IT et explore la pagination. Chaque offre est ensuite visitée pour extraire des attributs structurés: titre, entreprise, localisation, description, URL et métadonnées.
+
+\subsection{Filtrage Data/ML}
+Un filtrage strict est réalisé via des expressions régulières (ex: \texttt{data}, \texttt{machine learning}, \texttt{ai}) et des exclusions (ex: \texttt{frontend}, \texttt{devops}). L'objectif est d'exclure les postes IT génériques non centrés sur la donnée.
+
+\subsection{Extraction de l'entreprise}
+Une extraction robuste s'appuie sur la balise \texttt{og:title} de la page, au format \texttt{[COMPANY] Job Title}. Un \emph{fallback} texte est prévu si la métadonnée est absente.
+
+\section{Scraper Indeed (Selenium + undetected-chromedriver)}
+\subsection{Contexte anti-bot}
+Indeed applique fréquemment des protections qui bloquent les scrapers classiques. La solution adoptée utilise \texttt{undetected\_chromedriver} et une navigation interactive.
+
+\subsection{Multi-régions}
+Le scraper supporte plusieurs domaines (ex: ES, FR, UK) et collecte des liens de résultats via pagination. Les pages d'offres sont ensuite visitées pour extraire titre, entreprise, localisation et description.
+
+\subsection{Filtrage et limitation}
+Le filtrage Data/ML est appliqué sur le titre et la description (regex + exclusions). Un paramètre \texttt{max\_offers} limite le nombre d'offres afin de maîtriser temps d'exécution et charge.
+
+\section{Artefacts produits}
+Les résultats bruts sont exportés en CSV dans \texttt{data/}. Ces fichiers constituent l'entrée de la phase de nettoyage.

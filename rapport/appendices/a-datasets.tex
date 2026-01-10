@@ -1,0 +1,32 @@
+\chapter{Liste des datasets Superset}
+
+Dans Superset, un \textbf{dataset} correspond \`a \textbf{une table ou une vue} c\^ot\'e Snowflake. La cr\'eation a donc \`et\'e r\'ep\'et\'ee pour les tables du sch\'ema en \`etoile ainsi que pour les vues du data mart.
+
+\begin{longtable}{p{0.48\textwidth}p{0.45\textwidth}}
+	oprule
+	extbf{Dataset} & \textbf{R\^ole}\\
+\midrule
+\endfirsthead
+	oprule
+	extbf{Dataset} & \textbf{R\^ole}\\
+\midrule
+\endhead
+
+FACT\_JOBS & Faits: offres (m\'etadonn\'ees, source, dates)\\
+FACT\_JOB\_SKILLS & Faits: relation offre--comp\'etence + confiance\\
+DIM\_COMPANIES & Dimension: entreprises (nom, industrie, pays)\\
+DIM\_LOCATIONS & Dimension: localisations (ville, pays, r\'egion)\\
+DIM\_SKILLS & Dimension: comp\'etences (nom, cat\'egorie)\\
+VW\_JOBS\_FULL\_CONTEXT & Vue enrichie jobs + skills agr\'eg\'ees\\
+VW\_SKILLS\_DEMAND & Demande de comp\'etences, pourcentage, confiance\\
+VW\_JOBS\_BY\_TITLE & Distribution des titres normalis\'es\\
+VW\_MARKET\_OVERVIEW & KPI globaux pour cartes\\
+VW\_COMPANY\_OPPORTUNITIES & Entreprises qui recrutent + top skills\\
+VW\_REGIONAL\_ANALYSIS & Analyse g\'eographique (par location)\\
+VW\_SKILL\_SPECIALIZATION & Skills dominantes par r\^ole\\
+VW\_TRENDING\_SKILLS & Tendances 7j/30j\\
+VW\_JOB\_COMPLEXITY & Proxy complexit\'e par r\^ole\\
+
+\bottomrule
+\end{longtable}
+

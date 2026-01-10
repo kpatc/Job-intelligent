@@ -1,0 +1,22 @@
+\chapter{Vues BI Snowflake}
+
+Les vues BI sont d\'efinies dans \texttt{scripts/snowflake\_datamart.sql}. Elles sont con\c{c}ues pour simplifier la construction des charts (champs pr\^ets \`a l'emploi, agr\'egations et listes concat\'en\'ees).
+
+\section{VW\_JOBS\_FULL\_CONTEXT (vue jobs enrichie)}
+Expose pour chaque offre: entreprise, localisation, liste de skills (\texttt{LISTAGG}), nombre de skills, et m\'etadonn\'ees (source, dates).
+
+\section{VW\_SKILLS\_DEMAND (demande de comp\'etences)}
+Calcule le nombre d'offres demandant une comp\'etence, un pourcentage de demande et une confiance moyenne.
+
+\section{VW\_JOBS\_BY\_TITLE (distribution des titres)}
+Distribution des titres normalis\'es et indicateurs associ\'es (nombre d'entreprises, nombre de localisations).
+
+\section{VW\_MARKET\_OVERVIEW (KPI)}
+Contient des KPI pr\^ets \`a afficher sous forme de cartes (total jobs, total companies, total skills, etc.).
+
+\section{VW\_COMPANY\_OPPORTUNITIES (vue entreprises)}
+Agr\`ege le nombre de postes ouverts par entreprise, les skills requises et la couverture g\'eographique.
+
+\section{VW\_REGIONAL\_ANALYSIS (vue g\'eographique)}
+Agr\`ege par \texttt{LOCATION\_NAME} et fournit \texttt{REGION}/\texttt{COUNTRY} par d\'efaut via \texttt{COALESCE}.
+

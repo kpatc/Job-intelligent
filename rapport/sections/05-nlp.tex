@@ -1,0 +1,33 @@
+\chapter{Extraction des compétences (NLP)}
+
+\section{Objectif}
+L'objectif est d'extraire automatiquement une liste de compétences pertinentes à partir des descriptions d'offres. Cette information alimente:
+\begin{itemize}
+  \item la mesure de la demande (quelles compétences dominent),
+  \item la construction du data mart (agrégations),
+  \item le moteur de recommandation (matching profil/offre).
+\end{itemize}
+
+\section{Approche hybride}
+Le module d'extraction combine:
+\begin{itemize}
+  \item \textbf{Regex} sur une base de patterns (langages, outils, cloud, BI, etc.).
+  \item \textbf{Sentence-BERT} (all-MiniLM-L6-v2) pour détecter des mentions implicites via similarité sémantique.
+\end{itemize}
+
+\section{Taxonomie}
+Une taxonomie regroupe les compétences en catégories (ex: \emph{Programming Languages}, \emph{Data Engineering}, \emph{Databases}, \emph{Machine Learning}, etc.). Cette catégorisation facilite les graphiques par famille de compétences.
+
+\section{Sortie structurée}
+Pour chaque offre, le module produit une table relationnelle (job, skill) avec:
+\begin{itemize}
+  \item un score de confiance (0--1),
+  \item la position approximative de la première mention,
+  \item la méthode (regex/bert/hybride).
+\end{itemize}
+
+\section{Remarques de robustesse}
+\begin{itemize}
+  \item En absence de Sentence-Transformers, le système fonctionne en mode regex-only.
+  \item Les patterns sont conçus pour éviter des collisions (ex: \texttt{java} vs \texttt{javascript}).
+\end{itemize}

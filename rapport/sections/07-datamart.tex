@@ -1,0 +1,27 @@
+\chapter{Data Mart BI (Vues Snowflake)}
+
+\section{Motivation}
+Les dashboards exigent des requêtes rapides et des champs déjà prêts pour l'analyse. Plutôt que d'interroger directement le schéma en étoile pour chaque graphique, un data mart est exposé via des vues \texttt{VW\_\*}.
+
+\section{Vues principales}
+\begin{itemize}
+  \item \texttt{VW\_JOBS\_FULL\_CONTEXT}: offre enrichie (entreprise, localisation, skills agrégées).
+  \item \texttt{VW\_SKILLS\_DEMAND}: demande par compétence (volumes, pourcentage, confiance).
+  \item \texttt{VW\_JOBS\_BY\_TITLE}: distribution des titres normalisés.
+  \item \texttt{VW\_MARKET\_OVERVIEW}: métriques globales (KPI).
+  \item \texttt{VW\_COMPANY\_OPPORTUNITIES}: entreprises qui recrutent et leurs caractéristiques.
+  \item \texttt{VW\_REGIONAL\_ANALYSIS}: analyse géographique (adaptée par localisation).
+  \item \texttt{VW\_SKILL\_SPECIALIZATION}: compétences dominantes par titre.
+  \item \texttt{VW\_TRENDING\_SKILLS}: tendances sur fenêtres temporelles.
+  \item \texttt{VW\_JOB\_COMPLEXITY}: score de complexité (proxy).
+\end{itemize}
+
+\section{Correction de la vue régionale}
+Une difficulté rencontrée concernait l'agrégation par (région, pays) lorsque ces champs sont absents/NULL dans les données. La vue a été ajustée pour regrouper par \texttt{LOCATION\_NAME} et fournir des valeurs par défaut via \texttt{COALESCE}.
+
+\section{Avantages pour la BI}
+\begin{itemize}
+  \item Simplification: des champs prêts à l'emploi (ex: skills agrégées en liste).
+  \item Performance: agrégations réalisées côté entrepôt.
+  \item Cohérence: une source unique de vérité pour tous les dashboards.
+\end{itemize}

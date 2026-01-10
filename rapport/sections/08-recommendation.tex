@@ -1,0 +1,26 @@
+\chapter{Système de recommandation}
+
+\section{Objectif}
+Au-delà de la BI descriptive, le projet inclut un moteur de recommandation permettant de classer des offres selon un profil candidat.
+
+\section{Principe de scoring}
+Le scoring combine deux composantes:\begin{itemize}
+  \item \textbf{Match compétences} (pondéré majoritairement): présence des compétences du candidat dans la description.
+  \item \textbf{Similarité sémantique}: similarité cosinus entre l'embedding du profil et les embeddings des offres.
+\end{itemize}
+
+\section{Embeddings (Sentence-BERT)}
+Les descriptions des offres sont encodées avec le modèle \texttt{all-MiniLM-L6-v2}. Les embeddings sont pré-calculés au chargement afin d'accélérer la recommandation.
+
+\section{Fusion et pondération}
+La note finale est une combinaison pondérée, typiquement 60\% compétences et 40\% sémantique. Cette pondération reflète l'importance des prérequis techniques explicites.
+
+\section{Sortie}
+Le moteur produit un DataFrame avec:\begin{itemize}
+  \item titre, entreprise, localisation,
+  \item score compétences, score sémantique, score combiné,
+  \item tri décroissant et top-$k$ résultats.
+\end{itemize}
+
+\section{Usage}
+Un scénario d'exemple génère des recommandations et exporte un fichier \texttt{candidate\_recommendations.csv} exploitable en BI.

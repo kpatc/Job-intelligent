@@ -1,0 +1,44 @@
+\chapter{Runbook (ex\'ecution du pipeline)}
+
+\section{Environnement}
+Les d\'ependances Python sont list\'ees dans \texttt{requirements.txt}. Les variables Snowflake sont d\'efinies dans \texttt{.env}.
+
+\section{1. Ingestion}
+\begin{lstlisting}[language=bash]
+python src/ingestion/rekrute_ingester.py
+python src/ingestion/indeed_ingester.py
+\end{lstlisting}
+
+\section{2. Nettoyage}
+\begin{lstlisting}[language=bash]
+python src/processing/data_cleaner.py
+# Produit: data/jobs_cleaned.csv
+\end{lstlisting}
+
+\section{3. Extraction de skills}
+\begin{lstlisting}[language=bash]
+python src/nlp/skills_extractor.py
+# Produit: data/jobs_skills.csv
+\end{lstlisting}
+
+\section{4. Chargement Snowflake}
+\begin{lstlisting}[language=bash]
+python -c "from src.database.snowflake_loader import load_to_snowflake; load_to_snowflake()"
+\end{lstlisting}
+
+\section{5. Data mart (vues)}
+Ex\'ecuter \texttt{scripts/snowflake_datamart.sql} dans Snowflake (worksheet SQL), afin de cr\'eer/mettre \`a jour les vues \texttt{VW\_\*}.
+
+\section{6. Superset (Docker)}
+\begin{lstlisting}[language=bash]
+docker-compose up -d
+# UI: http://localhost:8088 (admin/admin123)
+\end{lstlisting}
+
+\section{Connexion Snowflake dans Superset}
+Le driver Snowflake est install\'e automatiquement au d\'emarrage (voir \texttt{superset_init.sh}). Ensuite:\begin{itemize}
+	\item cr\'eer la connexion Snowflake dans Superset,
+	\item cr\'eer les datasets (1 table/vue = 1 dataset),
+	\item construire les dashboards \`a partir des vues BI.
+\end{itemize}
+
